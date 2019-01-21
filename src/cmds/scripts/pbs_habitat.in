@@ -330,57 +330,19 @@ upgrade_db() {
 	CWD=`pwd`
 	cd "${data_dir}"
 	#Perform pg_upgrade -c to check if we can upgrade the cluster or not
-	err=`su ${user} -c "/bin/sh -c '${PGSQL_LIBSTR} ${inst_dir}/bin/pg_upgrade -b ${old_inst_dir}/bin -B ${inst_dir}/bin -d ${old_data_dir} -D ${data_dir} -c'" 2>&1`
-	if [ $? -ne 0 ]; then
-		echo "Refer pg_upgrade log files at $PBS_HOME/datastore/pg_upgrade_internal.log,"
-		echo "$PBS_HOME/datastore/pg_upgrade_server.log and"
-		echo "$PBS_HOME/datastore/pg_upgrade_utility.log for more information"
-		revoke_db_trust_login "${data_dir}"
-		ret=$?
-		if [ $ret -ne 0 ]; then
-			return $ret
-		fi
+	#err=`su ${user} -c "/bin/sh -c '${PGSQL_LIBSTR} ${inst_dir}/bin/pg_upgrade -b ${old_inst_dir}/bin -B ${inst_dir}/bin -d ${old_data_dir} -D ${data_dir} -c'" 2>&1`
+	
+        su - ${user} -s /bin/sh -c "/bin/sh -c '${PGSQL_LIBSTR} ${old_inst_dir}/bin/pg_ctl -D ${old_data_dir} -o \"-p ${PBS_DATA_SERVICE_PORT}\" start'"
 
-		revoke_db_trust_login "${old_data_dir}"
-		ret=$?
-		if [ $ret -ne 0 ]; then
-			return $ret
-		fi
+        su - ${user} -s /bin/sh -c "/bin/sh -c '${PGSQL_LIBSTR} ${old_inst_dir}/bin/pg_dump -U \"${user}\" -p \"${PBS_DATA_SERVICE_PORT}\" -d pbs_datastore > /tmp/dump.sql'" 
 
-		return 1
-	fi
+        su - ${user} -s /bin/sh -c "/bin/sh -c '${PGSQL_LIBSTR} ${old_inst_dir}/bin/pg_ctl -D ${old_data_dir} -o \"-p ${PBS_DATA_SERVICE_PORT}\" stop'"
 
-	#Perform pg_upgrade for database upgrade
-	err=`su ${user} -c "/bin/sh -c '${PGSQL_LIBSTR} ${inst_dir}/bin/pg_upgrade -b ${old_inst_dir}/bin -B ${inst_dir}/bin -d ${old_data_dir} -D ${data_dir}'" 2>&1`
-	if [ $? -ne 0 ]; then
-		echo "Refer pg_upgrade log files at $PBS_HOME/datastore/pg_upgrade_internal.log,"
-		echo "$PBS_HOME/datastore/pg_upgrade_server.log and"
-		echo "$PBS_HOME/datastore/pg_upgrade_utility.log for more information"
-		revoke_db_trust_login "${data_dir}"
-		ret=$?
-		if [ $ret -ne 0 ]; then
-			return $ret
-		fi
+        ${server_ctl} start > /dev/null
 
-		revoke_db_trust_login "${old_data_dir}"
-		ret=$?
-		if [ $ret -ne 0 ]; then
-			return $ret
-		fi
+        su - ${user} -s /bin/sh -c "/bin/sh -c '${PGSQL_LIBSTR} ${inst_dir}/bin/createdb -U \"${user}\" -p \"${PBS_DATA_SERVICE_PORT}\" pbs_datastore'"
 
-		return 1
-	fi
-
-	# start the dataservice
-	${server_ctl} start > /dev/null
-	if [ $? -ne 0 ]; then
-		echo "Error starting PBS Data Service"
-		return 1
-	fi
-
-	# Optimizer statistics are not transferred by pg_upgrade, so do it manually.
-	ENVSTR="PGPORT=${PBS_DATA_SERVICE_PORT}; export PGPORT; PGHOST=${PBS_SERVER}; export PGHOST; PGUSER=${user}; export PGUSER; "
-	err=`su ${user} -c "/bin/sh -c '${PGSQL_LIBSTR} ${ENVSTR} ${data_dir}/analyze_new_cluster.sh'"`
+        su - ${user} -s /bin/sh -c "/bin/sh -c '${PGSQL_LIBSTR} ${inst_dir}/bin/psql -U \"${user}\" -p \"${PBS_DATA_SERVICE_PORT}\" -f /tmp/dump.sql pbs_datastore'"
 
 	# Update locale of pbs database to C
 	if [ ${change_locale} -eq 1 ]; then
@@ -391,6 +353,14 @@ upgrade_db() {
 		fi
 	fi
 
+        err=`${PBS_EXEC}/sbin/pbs_ds_password -r`
+        if [ $? -ne 0 ]; then
+              echo $err
+              echo "Error setting password for PBS Data Service"
+              ${server_ctl} stop > /dev/null 2>&1
+              exit 1
+        fi
+
 	# stop the dataservice
 	${server_ctl} stop > /dev/null
 	if [ $? -ne 0 ]; then
@@ -399,14 +369,6 @@ upgrade_db() {
 		return 1
 	fi
 	revoke_db_trust_login "${data_dir}"
-	ret=$?
-	if [ $ret -ne 0 ]; then
-		return $ret
-	fi
-
-	cd "${CWD}"
-	# Delete old cluster
-	err=`${data_dir}/delete_old_cluster.sh`
 	ret=$?
 	if [ $ret -ne 0 ]; then
 		return $ret
