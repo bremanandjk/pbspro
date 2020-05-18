@@ -86,9 +86,9 @@ void
 req_locatejob(struct batch_request *preq)
 {
 	char 		 *at;
-	int		  i;
 	job		 *pjob;
 	char		 *location = NULL;
+	char	*p = NULL;
 
 	if ((at = strchr(preq->rq_ind.rq_locate, (int)'@')) != NULL)
 		*at = '\0';			/* strip off @server_name */
@@ -108,7 +108,7 @@ req_locatejob(struct batch_request *preq)
 	 * return the location if job is not history (i.e. state is not
 	 * JOB_STATE_MOVED) else search in tracking table.
 	 */
-	if (pjob && (pjob->ji_qs.ji_state != JOB_STATE_MOVED)) {
+	if (pjob && (pjob->ji_qs.ji_state != JOB_STATE_MOVED) && (pjob->ji_qs.ji_substate != JOB_SUBSTATE_TRNOUT)) {
 		location = pbs_server_name;
 	} else {
 		int	job_array_ret;
@@ -129,13 +129,13 @@ req_locatejob(struct batch_request *preq)
 				strcat(idbuf, pc);
 			strncpy(preq->rq_ind.rq_locate,idbuf,sizeof(preq->rq_ind.rq_locate));
 		}
-		for (i=0; i < server.sv_tracksize; i++) {
-			if ((server.sv_track+i)->tk_mtime &&
-				!strcmp((server.sv_track+i)->tk_jobid, preq->rq_ind.rq_locate)) {
-				location = (server.sv_track+i)->tk_location;
-				break;
-			}
+		if (pjob) {
+			if ((p = strchr(pjob->ji_qs.ji_destin, (int)'@')))
+				location = ++p;
+			else 
+				location = pjob->ji_qs.ji_destin;
 		}
+		
 	}
 	if (location) {
 		preq->rq_reply.brp_code = 0;

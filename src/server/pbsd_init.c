@@ -1565,10 +1565,8 @@ pbsd_init_job(job *pjob, int type)
 				break;
 
 			case JOB_SUBSTATE_TRNOUT:
-				pjob->ji_qs.ji_state = JOB_STATE_QUEUED;
-				pjob->ji_qs.ji_substate = JOB_SUBSTATE_QUEUED;
 				/* requeue as queued */
-				if (pbsd_init_reque(pjob, CHANGE_STATE) == -1)
+				if (pbsd_init_reque(pjob, KEEP_STATE) == -1)
 					return -1;
 				break;
 

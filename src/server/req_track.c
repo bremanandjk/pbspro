@@ -98,12 +98,8 @@ extern char 	    *pbs_server_name;
 void
 req_track(struct batch_request *preq)
 {
-	struct tracking *empty = NULL;
-	int		 i;
-	int		 need;
-	struct tracking	*new;
-	struct tracking *ptk;
 	struct rq_track *prqt;
+	job	*jobp;
 
 	/*  make sure request is from a server */
 
@@ -116,70 +112,32 @@ req_track(struct batch_request *preq)
 	/* also remember first empty slot in case its needed */
 
 	prqt = &preq->rq_ind.rq_track;
+	
+	jobp = find_job(prqt->rq_jid);
+	if (jobp == NULL) {
+		sprintf(log_buffer,
+			"job %s not found",
+			prqt->rq_jid);
+		log_err(-1, __func__, log_buffer);
 
-	ptk = server.sv_track;
-	for (i=0; i<server.sv_tracksize; i++) {
-		if ((ptk+i)->tk_mtime) {
-			if (!strcmp((ptk+i)->tk_jobid, prqt->rq_jid)) {
-
-				/*
-				 * found record, discard it if state == exiting,
-				 * otherwise, update it if older
-				 */
-
-				if (*prqt->rq_state == 'E') {
-					(ptk+i)->tk_mtime = 0;
-					track_history_job(prqt, NULL);
-				} else if ((ptk+i)->tk_hopcount < prqt->rq_hopcount) {
-					(ptk+i)->tk_hopcount = prqt->rq_hopcount;
-					(void)strcpy((ptk+i)->tk_location, prqt->rq_location);
-					(ptk+i)->tk_state = *prqt->rq_state;
-					(ptk+i)->tk_mtime = time_now;
-					track_history_job(prqt, preq->rq_extend);
-				}
-				server.sv_trackmodifed = 1;
-				reply_ack(preq);
-				return;
-			}
-		} else if (empty == NULL) {
-			empty = ptk + i;
-		}
 	}
-
-	/* if we got here, didn't find it... */
-
-	if (*prqt->rq_state != 'E') {
-
-		/* and need to add it */
-
-		if (empty == NULL) {
-
-			/* need to make room for more */
-
-			need = server.sv_tracksize * 3 / 2;
-			new  = (struct tracking *)realloc(server.sv_track,
-				need * sizeof(struct tracking));
-			if (new == NULL) {
-				log_err(errno, "req_track", "malloc failed");
-				req_reject(PBSE_SYSTEM, 0, preq);
-				return;
-			}
-			empty = new + server.sv_tracksize; /* first new slot */
-			for (i = server.sv_tracksize; i < need; i++)
-				(new + i)->tk_mtime = 0;
-			server.sv_tracksize = need;
-			server.sv_track     = new;
-		}
-
-		empty->tk_mtime = time_now;
-		empty->tk_hopcount = prqt->rq_hopcount;
-		(void)strcpy(empty->tk_jobid, prqt->rq_jid);
-		(void)strcpy(empty->tk_location, prqt->rq_location);
-		empty->tk_state = *prqt->rq_state;
-		server.sv_trackmodifed = 1;
+	
+	if (*prqt->rq_state == 'E') {
+		if (svr_chk_history_conf() == 0)
+			job_purge(jobp);
+		else		
+			track_history_job(prqt, NULL);
+	} else if (jobp->ji_wattr[(int)JOB_ATR_hopcount].at_val.at_long < prqt->rq_hopcount) {
+		jobp->ji_wattr[(int)JOB_ATR_hopcount].at_val.at_long = prqt->rq_hopcount;
+		jobp->ji_wattr[(int)JOB_ATR_hopcount].at_flags |=
+			ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
+		strncpy(jobp->ji_qs.ji_destin, prqt->rq_location, PBS_MAXROUTEDEST);
+		track_history_job(prqt, preq->rq_extend);
 	}
+	
 	reply_ack(preq);
 	return;
+	
 }
 
 /**

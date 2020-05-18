@@ -439,8 +439,7 @@ post_movejob(struct work_task *pwt)
 			 */
 			if (svr_chk_history_conf())
 				svr_setjob_histinfo(jobp, T_MOV_JOB);
-			else
-				job_purge(jobp);
+
 		} else
 			r = PBSE_ROUTEREJ;
 	} else {

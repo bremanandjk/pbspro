@@ -226,6 +226,8 @@ stat_a_jobidname(struct batch_request *preq, char *name, int dohistjobs, int dos
 		pjob = find_job(name);
 		if (pjob == NULL) {
 			return (PBSE_UNKJOBID);
+		} else if ((svr_chk_history_conf() == 0) && (pjob->ji_qs.ji_substate == JOB_SUBSTATE_TRNOUT)) {
+			return (PBSE_UNKJOBID);
 		} else if ((!dohistjobs) && (rc = svr_chk_histjob(pjob))) {
 			return (rc);
 		}
