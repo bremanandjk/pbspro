@@ -400,12 +400,16 @@ reply_ack(struct batch_request *preq)
 		return;
 	}
 
-	if (preq->rq_reply.brp_choice != BATCH_REPLY_CHOICE_NULL)
-		/* in case another reply was being built up, clean it out */
-		reply_free(&preq->rq_reply);
+	if (preq->rq_type != PBS_BATCH_DeleteJob2) {
+		if (preq->rq_reply.brp_choice != BATCH_REPLY_CHOICE_NULL)
+			/* in case another reply was being built up, clean it out */
+			reply_free(&preq->rq_reply);
+		preq->rq_reply.brp_choice  = BATCH_REPLY_CHOICE_NULL;
+	}
+		
 	preq->rq_reply.brp_code    = PBSE_NONE;
 	preq->rq_reply.brp_auxcode = 0;
-	preq->rq_reply.brp_choice  = BATCH_REPLY_CHOICE_NULL;
+
 	(void)reply_send(preq);
 }
 
@@ -447,6 +451,15 @@ reply_free(struct batch_reply *prep)
 			(void)free(pstat);
 			pstat = pstatx;
 		}
+		
+	} else if (prep->brp_choice == BATCH_REPLY_CHOICE_Delete) {
+		pstat = (struct brp_status *)GET_NEXT(prep->brp_un.brp_delstat);
+		while (pstat) {
+			pstatx = (struct brp_status *)GET_NEXT(pstat->brp_stlink);
+			(void)free(pstat);
+			pstat = pstatx;
+	}
+		
 	} else if (prep->brp_choice == BATCH_REPLY_CHOICE_RescQuery) {
 		(void)free(prep->brp_un.brp_rescq.brq_avail);
 		(void)free(prep->brp_un.brp_rescq.brq_alloc);
@@ -493,24 +506,74 @@ req_reject(int code, int aux, struct batch_request *preq)
 			"req_reject", log_buffer);
 	}
 	set_err_msg(code, msgbuf, ERR_MSG_SIZE);
-	if (preq->rq_reply.brp_choice != BATCH_REPLY_CHOICE_NULL) {
-		/* in case another reply was being built up, clean it out */
-		reply_free(&preq->rq_reply);
+	
+	if (preq->rq_type != PBS_BATCH_DeleteJob2) {
+		if (preq->rq_reply.brp_choice != BATCH_REPLY_CHOICE_NULL) {
+			/* in case another reply was being built up, clean it out */
+			reply_free(&preq->rq_reply);
+		}
+
+		if (*msgbuf != '\0') {
+			preq->rq_reply.brp_choice  = BATCH_REPLY_CHOICE_Text;
+			if ((preq->rq_reply.brp_un.brp_txt.brp_str = strdup(msgbuf)) == NULL) {
+				log_err(-1, "req_reject", "Unable to allocate Memory!\n");
+				return;
+			}
+			preq->rq_reply.brp_un.brp_txt.brp_txtlen = strlen(msgbuf);
+		} else {
+			preq->rq_reply.brp_choice  = BATCH_REPLY_CHOICE_NULL;
+		}
 	}
+		
 	preq->rq_reply.brp_code    = code;
 	preq->rq_reply.brp_auxcode = aux;
-	if (*msgbuf != '\0') {
-		preq->rq_reply.brp_choice  = BATCH_REPLY_CHOICE_Text;
-		if ((preq->rq_reply.brp_un.brp_txt.brp_str = strdup(msgbuf)) == NULL) {
-			log_err(-1, "req_reject", "Unable to allocate Memory!\n");
-			return;
-		}
-		preq->rq_reply.brp_un.brp_txt.brp_txtlen = strlen(msgbuf);
-	} else {
-		preq->rq_reply.brp_choice  = BATCH_REPLY_CHOICE_NULL;
-	}
+	
 	(void)reply_send(preq);
 }
+
+/**
+ * @brief
+ * 		Create a reject (error) reply for a request, then send the reply.
+ *
+ * @param[in]	code	- PBS error code indicating the reason the rejection
+ * 							is taking place.  If this is PBSE_NONE, no log message is output.
+ * @param[in]	aux	- Auxiliary error code
+ * @param[in,out]	preq	- Pointer to batch request
+ *
+ * @par Side-effects:
+ *		Always frees the request structure.
+ */
+void
+req_reject_delete(int code, int aux, struct batch_request *preq)
+{
+	int   evt_type;
+	char  msgbuf[ERR_MSG_SIZE];
+
+	if (preq == NULL)
+		return;
+
+	if (preq->rq_type == PBS_BATCH_ModifyJob_Async || preq->rq_type == PBS_BATCH_AsyrunJob) {
+		free_br(preq);
+		return;
+	}
+
+	if (code != PBSE_NONE) {
+		evt_type = PBSEVENT_DEBUG;
+		if (code == PBSE_BADHOST)
+			evt_type |= PBSEVENT_SECURITY;
+		sprintf(log_buffer,
+			"Reject reply code=%d, aux=%d, type=%d, from %s@%s",
+			code, aux, preq->rq_type, preq->rq_user, preq->rq_host);
+		log_event(evt_type, PBS_EVENTCLASS_REQUEST, LOG_INFO,
+			"req_reject", log_buffer);
+	}
+
+	preq->rq_reply.brp_code    = code;
+	preq->rq_reply.brp_auxcode = aux;
+
+	(void)reply_send(preq);
+}
+
 
 /**
  * @brief

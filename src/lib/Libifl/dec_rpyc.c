@@ -91,8 +91,11 @@ decode_DIS_replyCmd(int sock, struct batch_reply *reply)
 	struct brp_select **pselx;
 	struct batch_status *pstcmd;
 	struct batch_status **pstcx = NULL;
+	struct batch_status *pdel;
+	struct batch_status **pdelx = NULL;
 	int rc = 0;
 	size_t txtlen;
+	int errcode;
 	preempt_job_info *ppj = NULL;
 
 	/* first decode "header" consisting of protocol type and version */
@@ -201,6 +204,50 @@ again:
 			}
 			if (reply->brp_is_part)
 				goto again;
+			break;
+
+		case BATCH_REPLY_CHOICE_Delete:
+
+			/* have to get count of number of status objects first */
+			if (pdelx == NULL) {
+				reply->brp_un.brp_delstatc = NULL;
+				pdelx = &reply->brp_un.brp_delstatc;
+				reply->brp_count = 0;
+			}
+			ct = disrui(sock, &rc);
+			if (rc)
+				return rc;
+			reply->brp_count += ct;
+
+			while (ct--) {
+				pdel = (struct batch_status *) malloc(sizeof(struct batch_status));
+				if (pdel == 0)
+					return DIS_NOMALLOC;
+				pdel->next = NULL;
+				pdel->text = NULL;
+				pdel->attribs = NULL;
+
+				i = disrui(sock, &rc); /* read and discard brp_objtype */
+				if (rc == 0)
+					pdel->name = disrst(sock, &rc);
+				if (rc) {
+					pbs_statfree(pdel);
+					return rc;
+				}
+				if (rc == 0) {
+					errcode = disrui(sock, &rc);
+					pdel->text = (char *)malloc(10);
+					snprintf(pdel->text, 10, "%d", errcode);
+				}
+				
+				if (rc) {
+					pbs_statfree(pdel);
+					return rc;
+				}
+				*pdelx = pdel;
+				pdelx = &pdel->next;
+			}
+
 			break;
 
 		case BATCH_REPLY_CHOICE_Text:

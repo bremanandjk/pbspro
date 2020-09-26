@@ -103,6 +103,15 @@ struct rq_manage {
 	pbs_list_head rq_attr; /* svrattrlist */
 };
 
+struct rq_deljob {
+	int rq_cmd;
+	int rq_objtype;
+	char *rq_objname;
+	int tot_jobs;
+	int tot_rpys; 
+	pbs_list_head rq_attr; /* svrattrlist */
+};
+
 /* Management - used by PBS_BATCH_Manager requests */
 struct rq_management {
 	struct rq_manage rq_manager;
@@ -289,7 +298,7 @@ struct batch_request {
 		struct rq_jobfile rq_jobfile;
 		char rq_rdytocommit[PBS_MAXSVRJOBID + 1];
 		char rq_commit[PBS_MAXSVRJOBID + 1];
-		struct rq_manage rq_delete;
+		struct rq_deljob rq_delete;
 		struct rq_hold rq_hold;
 		char rq_locate[PBS_MAXSVRJOBID + 1];
 		struct rq_manage rq_manager;
@@ -323,6 +332,7 @@ struct batch_request {
 extern struct batch_request * alloc_br(int);
 extern void reply_ack(struct batch_request *);
 extern void req_reject(int, int, struct batch_request *);
+extern void req_reject_delete(int, int, struct batch_request *);
 extern void req_reject_msg(int, int, struct batch_request *, int);
 extern void reply_badattr(int, int, svrattrl *, struct batch_request *);
 extern void reply_badattr_msg(int, int, svrattrl *, struct batch_request *, int);
@@ -384,6 +394,7 @@ extern int decode_DIS_CopyHookFile(int, struct batch_request *);
 extern int decode_DIS_DelHookFile(int, struct batch_request *);
 extern int decode_DIS_JobObit(int, struct batch_request *);
 extern int decode_DIS_Manage(int, struct batch_request *);
+extern int decode_DIS_Deljob(int, struct batch_request *);
 extern int decode_DIS_MoveJob(int, struct batch_request *);
 extern int decode_DIS_MessageJob(int, struct batch_request *);
 extern int decode_DIS_ModifyResv(int, struct batch_request *);

@@ -842,6 +842,7 @@ dispatch_request(int sfds, struct batch_request *request)
 				net_add_close_func(sfds, (void (*)(int))0);
 			break;
 
+		case PBS_BATCH_DeleteJob2:
 		case PBS_BATCH_DeleteJob:
 			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_INFO,
 				request->rq_ind.rq_delete.rq_objname,
@@ -1501,6 +1502,11 @@ free_br(struct batch_request *preq)
 			if (preq->rq_ind.rq_status.rq_id)
 				free(preq->rq_ind.rq_status.rq_id);
 			free_attrlist(&preq->rq_ind.rq_status.rq_attr);
+			break;
+		case PBS_BATCH_DeleteJob2:
+		case PBS_BATCH_DeleteJob:
+			if (preq->rq_ind.rq_delete.rq_objname)
+				free(preq->rq_ind.rq_delete.rq_objname);
 			break;
 		case PBS_BATCH_CopyFiles:
 		case PBS_BATCH_DelFiles:

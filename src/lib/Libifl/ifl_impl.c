@@ -215,6 +215,26 @@ pbs_deljob(int c, char *jobid, char *extend) {
 	return (*pfn_pbs_deljob)(c, jobid, extend);
 }
 
+/**
+ * @brief
+ *	Pass-through call to send the delete Job request
+ * 	really just an instance of the manager request
+ *
+ * @param[in] c - connection handler
+ * @param[in] jobid - job identifier
+ * @param[in] extend - string to encode req
+ *
+ * @return	struct batch_status *
+ * @retval	0	success
+ * @retval	!0	error
+ *
+ */
+struct batch_status *
+pbs_deljob2(int c, char *jobid, char *extend) {
+	return (*pfn_pbs_deljob2)(c, jobid, extend);
+}
+
+
 
 /**
  * @brief

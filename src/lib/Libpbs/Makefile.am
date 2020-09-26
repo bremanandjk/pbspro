@@ -158,6 +158,7 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_JobFile.c \
 	../Libifl/dec_JobId.c \
 	../Libifl/dec_Manage.c \
+	../Libifl/dec_DelJob.c \
 	../Libifl/dec_MsgJob.c \
 	../Libifl/dec_MoveJob.c \
 	../Libifl/dec_UserCred.c \
@@ -209,6 +210,7 @@ libpbs_la_SOURCES = \
 	../Libifl/int_hook.c \
 	../Libifl/int_jcred.c \
 	../Libifl/int_manager.c \
+	../Libifl/int_delete2.c \
 	../Libifl/int_manage2.c \
 	../Libifl/int_msg2.c \
 	../Libifl/int_rdrpy.c \
@@ -234,6 +236,7 @@ libpbs_la_SOURCES = \
 	../Libifl/pbsD_alterjo.c \
 	../Libifl/pbsD_connect.c \
 	../Libifl/pbsD_deljob.c \
+	../Libifl/pbsD_deljob2.c \
 	../Libifl/pbsD_holdjob.c \
 	../Libifl/pbsD_locjob.c \
 	../Libifl/pbsD_manager.c \

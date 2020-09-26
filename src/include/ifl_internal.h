@@ -65,6 +65,8 @@ extern char *__pbs_default(void);
 
 extern int __pbs_deljob(int, char *, char *);
 
+extern int __pbs_deljob2(int, char *, char *);
+
 extern int __pbs_disconnect(int);
 
 extern char *__pbs_geterrmsg(int);
