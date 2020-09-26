@@ -79,7 +79,7 @@ char **envp;
 
 	char job_id_out[PBS_MAXCLTJOBID];
 	char server_out[MAXSERVERNAME];
-	char rmt_server[MAXSERVERNAME];
+	//char rmt_server[MAXSERVERNAME];
 
 	char *keystr, *valuestr;
 	int dfltmail = 0;
@@ -89,6 +89,9 @@ char **envp;
 	struct attrl *attr;
 	struct batch_status *ss = NULL;
 	char *errmsg;
+	char *job_list = NULL;
+	size_t job_list_size = 0;
+	int count = 0;
 
 #define MAX_TIME_DELAY_LEN 32
 	/* -W no longer supports a time delay */
@@ -97,6 +100,7 @@ char **envp;
 	char warg1[MAX_TIME_DELAY_LEN+7];
 
 #define GETOPT_ARGS "W:x"
+#define MAX_JOBS_LIST 1000
 
 	/*test for real deal or just version and exit*/
 
@@ -167,11 +171,18 @@ char **envp;
 		fprintf(stderr, "qdel: unable to initialize security library.\n");
 		exit(1);
 	}
+	
+	/* allocate enough memory to store list of job ids */
+	job_list_size = (MAX_JOBS_LIST * (PBS_MAXCLTJOBID + 1));
+	job_list = calloc(MAX_JOBS_LIST, PBS_MAXCLTJOBID + 1);
+	if (job_list == NULL)
+		fprintf(stderr, "qdel: out of memory.\n");
 
 	for (; optind < argc; optind++) {
 		int connect;
-		int stat=0;
-		int located = FALSE;
+		//int stat=0;
+		struct batch_deljob_status *p_delstatus;
+		//int located = FALSE;
 
 		pbs_strncpy(job_id, argv[optind], sizeof(job_id));
 		if (get_server(job_id, job_id_out, server_out)) {
@@ -179,7 +190,22 @@ char **envp;
 			any_failed = 1;
 			continue;
 		}
-cnt:
+		
+		if (count == 0)
+			memset(job_list, 0, job_list_size);
+		
+		strncat(job_list, job_id_out, job_list_size - strlen(job_list));
+		if (optind != argc -1) {
+			if (++count != MAX_JOBS_LIST) {
+				strncat(job_list, ",", job_list_size - strlen(job_list));
+				continue;
+			}
+			else 
+				count = 0;
+		}
+		job_list[strlen(job_list)] = '\0';
+
+//cnt:
 		connect = cnt2server(server_out);
 		if (connect <= 0) {
 			fprintf(stderr, "qdel: cannot connect to server %s (errno=%d)\n",
@@ -241,14 +267,22 @@ cnt:
 			pbs_strncpy(warg, warg1, sizeof(warg));
 		}
 
-		stat = pbs_deljob(connect, job_id_out, warg);
+		p_delstatus = pbs_deljob2(connect, job_list, warg);
+		
+		while (p_delstatus != NULL) {
+			if ((pbse_to_txt(p_delstatus->code) != NULL) && (p_delstatus->code != PBSE_HISTJOBDELETED)) {
+				fprintf(stderr, "%s: %s %s\n", "qdel", pbse_to_txt(p_delstatus->code), p_delstatus->name);
+				any_failed = p_delstatus->code;
+			}
+			p_delstatus = p_delstatus->next;
+		}
 
 		/*
 		 * The counter num_deleted should not be updated  when a history job is deleted .
-		 */
+	
 		if (pbs_errno != PBSE_HISTJOBDELETED)
 			num_deleted++;
-		if (stat && (pbs_errno != PBSE_UNKJOBID && pbs_errno != PBSE_HISTJOBDELETED)) {
+		if (p_delstatus && (pbs_errno != PBSE_UNKJOBID && pbs_errno != PBSE_HISTJOBDELETED)) {
 			prt_job_err("qdel", connect, job_id_out);
 			any_failed = pbs_errno;
 		} else if (stat && (pbs_errno == PBSE_UNKJOBID) && !located) {
@@ -261,6 +295,7 @@ cnt:
 			prt_job_err("qdel", connect, job_id_out);
 			any_failed = pbs_errno;
 		}
+		*/
 
 		pbs_disconnect(connect);
 	}
