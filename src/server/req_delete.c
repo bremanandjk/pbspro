@@ -532,6 +532,7 @@ req_deletejob(struct batch_request *preq)
 			/* for each subjob that is running, delete it via req_deletejob2 */
 
 			++preq->rq_refct;
+			preq->rq_ind.rq_delete.tot_arr_jobs++;
 
 			/* keep the array from being removed while we are looking at it */
 			parent->ji_ajtrk->tkm_flags |= TKMFLG_NO_DELETE;
@@ -898,9 +899,14 @@ req_deletejob2(struct batch_request *preq, job *pjob)
 			 */
 			if (pjob->ji_pmt_preq != NULL)
 				reply_preempt_jobs_request(PBSE_NONE, PREEMPT_METHOD_DELETE, pjob);
-			preq->rq_ind.rq_delete.tot_rpys++;
-			if (preq->rq_ind.rq_delete.tot_rpys == preq->rq_ind.rq_delete.tot_jobs)
+				
+			if (preq->rq_parentbr) 
 				reply_ack(preq);
+			else {
+				preq->rq_ind.rq_delete.tot_rpys++;
+				if (preq->rq_ind.rq_delete.tot_rpys == preq->rq_ind.rq_delete.tot_jobs)
+					reply_ack(preq);
+			}
 			discard_job(pjob, "Forced Delete", 1);
 			rel_resc(pjob);
 
@@ -1444,9 +1450,15 @@ resend:
 	}
 
 	acct_del_write(pjob->ji_qs.ji_jobid, pjob, preq_clt, 0);
-	preq_clt->rq_ind.rq_delete.tot_rpys++;
-	if (preq_clt->rq_ind.rq_delete.tot_rpys == preq_clt->rq_ind.rq_delete.tot_jobs)
-		reply_ack(preq_clt); /* dont need it, reply now */
+	
+	if (preq_clt->rq_parentbr) {
+		reply_ack(preq_clt);
+	} else {
+		preq_clt->rq_ind.rq_delete.tot_rpys++;
+		if (preq_clt->rq_ind.rq_delete.tot_rpys == preq_clt->rq_ind.rq_delete.tot_jobs)
+			reply_ack(preq_clt); /* dont need it, reply now */
+	}
+
 
 	if (auxcode == JOB_SUBSTATE_TERM) {
 		/* Mom running a site supplied Terminate Job script   */

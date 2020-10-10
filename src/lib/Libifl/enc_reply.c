@@ -161,7 +161,7 @@ encode_DIS_reply_inner(int sock, struct batch_reply *reply)
 				if ((rc = diswui(sock, pdelstat->brp_objtype)) || (rc = diswst(sock, pdelstat->brp_objname)) || (rc = diswui(sock, pdelstat->brp_errcode)))
 					return rc;
 
-				pdelstat = (struct brp_status *) GET_NEXT(pdelstat->brp_stlink);
+				pdelstat = (struct brp_deletejobstat *) GET_NEXT(pdelstat->brp_stlink);
 			}
 			break;
 

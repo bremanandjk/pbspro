@@ -71,7 +71,7 @@ __pbs_deljob2(int c, char *jobid, char *extend)
 	struct attropl *aoplp = NULL;
 
 	if ((jobid == NULL) || (*jobid == '\0'))
-		return (pbs_errno = PBSE_IVALREQ);
+		return NULL;
 
 	return PBSD_delete2(c, PBS_BATCH_DeleteJob2,
 		MGR_CMD_DELETE,

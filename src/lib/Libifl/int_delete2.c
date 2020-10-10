@@ -74,33 +74,32 @@ PBSD_delete2(int c, int function, int command, int objtype, char *objname, struc
 {
 	int i;
 	struct batch_reply *reply;
-	int rc;
 	struct batch_status *rbsp = NULL;
 
 	/* initialize the thread context data, if not initialized */
 	if (pbs_client_thread_init_thread_context() != 0)
-		return pbs_errno;
+		return NULL;
 
 	/* verify the object name if creating a new one */
 	if (command == MGR_CMD_CREATE)
 		if (pbs_verify_object_name(objtype, objname) != 0)
-			return pbs_errno;
+			return NULL;
 
 	/* now verify the attributes, if verification is enabled */
 	if ((pbs_verify_attributes(c, function, objtype,
 		command, aoplp)) != 0)
-		return pbs_errno;
+		return NULL;
 
 	/* lock pthread mutex here for this connection */
 	/* blocking call, waits for mutex release */
 	if (pbs_client_thread_lock_connection(c) != 0)
-		return pbs_errno;
+		return NULL;
 
 	/* send the manage request */
 	i = PBSD_mgr_put(c, function, command, objtype, objname, aoplp, extend, PROT_TCP, NULL);
 	if (i) {
 		(void)pbs_client_thread_unlock_connection(c);
-		return i;
+		return NULL;
 	}
 
 	/* read reply from stream into presentation element */
@@ -114,18 +113,16 @@ PBSD_delete2(int c, int function, int command, int objtype, char *objname, struc
 		pbs_errno = PBSE_PROTOCOL;
 	} 
 	
-	if (reply->brp_un.brp_delstatc != NULL) {
+	if ((reply != NULL) && (reply->brp_un.brp_delstatc != NULL)) {
 		rbsp = reply->brp_un.brp_delstatc;
 		reply->brp_un.brp_delstatc = NULL;
 	}
 	
 	PBSD_FreeReply(reply);
 
-	rc = get_conn_errno(c);
-
 	/* unlock the thread lock and update the thread context data */
 	if (pbs_client_thread_unlock_connection(c) != 0)
-		return pbs_errno;
+		return NULL;
 
 	return rbsp;
 }

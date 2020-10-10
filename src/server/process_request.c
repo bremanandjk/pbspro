@@ -1423,8 +1423,16 @@ free_br(struct batch_request *preq)
 		 * goes to zero,  reply_send() it
 		 */
 		if (preq->rq_parentbr->rq_refct > 0) {
-			if (--preq->rq_parentbr->rq_refct == 0)
-				reply_send(preq->rq_parentbr);
+			if (--preq->rq_parentbr->rq_refct == 0) {
+				if (preq->rq_parentbr->rq_type == PBS_BATCH_DeleteJob2) {
+					preq->rq_parentbr->rq_ind.rq_delete.tot_rpys += preq->rq_parentbr->rq_ind.rq_delete.tot_arr_jobs ;
+					if (preq->rq_parentbr->rq_ind.rq_delete.tot_rpys == preq->rq_parentbr->rq_ind.rq_delete.tot_jobs) {
+						log_err(-1, "reply_send", "reply_send called!\n");
+						reply_send(preq->rq_parentbr);
+					}
+				} else 
+					reply_send(preq->rq_parentbr);
+			}
 		}
 
 		if (preq->tppcmd_msgid)

@@ -531,49 +531,6 @@ req_reject(int code, int aux, struct batch_request *preq)
 	(void)reply_send(preq);
 }
 
-/**
- * @brief
- * 		Create a reject (error) reply for a request, then send the reply.
- *
- * @param[in]	code	- PBS error code indicating the reason the rejection
- * 							is taking place.  If this is PBSE_NONE, no log message is output.
- * @param[in]	aux	- Auxiliary error code
- * @param[in,out]	preq	- Pointer to batch request
- *
- * @par Side-effects:
- *		Always frees the request structure.
- */
-void
-req_reject_delete(int code, int aux, struct batch_request *preq)
-{
-	int   evt_type;
-	char  msgbuf[ERR_MSG_SIZE];
-
-	if (preq == NULL)
-		return;
-
-	if (preq->rq_type == PBS_BATCH_ModifyJob_Async || preq->rq_type == PBS_BATCH_AsyrunJob) {
-		free_br(preq);
-		return;
-	}
-
-	if (code != PBSE_NONE) {
-		evt_type = PBSEVENT_DEBUG;
-		if (code == PBSE_BADHOST)
-			evt_type |= PBSEVENT_SECURITY;
-		sprintf(log_buffer,
-			"Reject reply code=%d, aux=%d, type=%d, from %s@%s",
-			code, aux, preq->rq_type, preq->rq_user, preq->rq_host);
-		log_event(evt_type, PBS_EVENTCLASS_REQUEST, LOG_INFO,
-			"req_reject", log_buffer);
-	}
-
-	preq->rq_reply.brp_code    = code;
-	preq->rq_reply.brp_auxcode = aux;
-
-	(void)reply_send(preq);
-}
-
 
 /**
  * @brief

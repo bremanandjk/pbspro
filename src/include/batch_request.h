@@ -109,6 +109,7 @@ struct rq_deljob {
 	char *rq_objname;
 	int tot_jobs;
 	int tot_rpys; 
+	int tot_arr_jobs;
 	pbs_list_head rq_attr; /* svrattrlist */
 };
 
@@ -332,7 +333,6 @@ struct batch_request {
 extern struct batch_request * alloc_br(int);
 extern void reply_ack(struct batch_request *);
 extern void req_reject(int, int, struct batch_request *);
-extern void req_reject_delete(int, int, struct batch_request *);
 extern void req_reject_msg(int, int, struct batch_request *, int);
 extern void reply_badattr(int, int, svrattrl *, struct batch_request *);
 extern void reply_badattr_msg(int, int, svrattrl *, struct batch_request *, int);

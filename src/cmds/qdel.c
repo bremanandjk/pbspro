@@ -79,7 +79,7 @@ char **envp;
 
 	char job_id_out[PBS_MAXCLTJOBID];
 	char server_out[MAXSERVERNAME];
-	char rmt_server[MAXSERVERNAME];
+	//char rmt_server[MAXSERVERNAME];
 
 	char *keystr, *valuestr;
 	int dfltmail = 0;
@@ -180,9 +180,9 @@ char **envp;
 
 	for (; optind < argc; optind++) {
 		int connect;
-		int stat=0;
+		//int stat=0;
 		struct batch_status *p_delstatus;
-		int located = FALSE;
+		//int located = FALSE;
 
 		pbs_strncpy(job_id, argv[optind], sizeof(job_id));
 		if (get_server(job_id, job_id_out, server_out)) {
@@ -205,7 +205,7 @@ char **envp;
 		}
 		job_list[strlen(job_list)] = '\0';
 
-cnt:
+//cnt:
 		connect = cnt2server(server_out);
 		if (connect <= 0) {
 			fprintf(stderr, "qdel: cannot connect to server %s (errno=%d)\n",

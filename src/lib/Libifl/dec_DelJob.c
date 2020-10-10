@@ -110,5 +110,6 @@ decode_DIS_Deljob(int sock, struct batch_request *preq)
 	if (rc) return rc;
 	preq->rq_ind.rq_delete.tot_jobs = 0;
 	preq->rq_ind.rq_delete.tot_rpys = 0;
+	preq->rq_ind.rq_delete.tot_arr_jobs = 0;
 	return (decode_DIS_svrattrl(sock, &preq->rq_ind.rq_delete.rq_attr));
 }
