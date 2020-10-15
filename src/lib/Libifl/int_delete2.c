@@ -69,21 +69,17 @@
  * @retval	!0	error
  *
  */
-struct batch_status *
+struct batch_deljob_status *
 PBSD_delete2(int c, int function, int command, int objtype, char *objname, struct attropl *aoplp, char *extend)
 {
 	int i;
 	struct batch_reply *reply;
-	struct batch_status *rbsp = NULL;
+	struct batch_deljob_status *rbsp = NULL;
 
 	/* initialize the thread context data, if not initialized */
 	if (pbs_client_thread_init_thread_context() != 0)
 		return NULL;
 
-	/* verify the object name if creating a new one */
-	if (command == MGR_CMD_CREATE)
-		if (pbs_verify_object_name(objtype, objname) != 0)
-			return NULL;
 
 	/* now verify the attributes, if verification is enabled */
 	if ((pbs_verify_attributes(c, function, objtype,

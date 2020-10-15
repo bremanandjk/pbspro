@@ -229,7 +229,7 @@ pbs_deljob(int c, char *jobid, char *extend) {
  * @retval	!0	error
  *
  */
-struct batch_status *
+struct batch_deljob_status *
 pbs_deljob2(int c, char *jobid, char *extend) {
 	return (*pfn_pbs_deljob2)(c, jobid, extend);
 }
@@ -549,6 +549,21 @@ void
 pbs_statfree(struct batch_status *bsp) {
 	(*pfn_pbs_statfree)(bsp);
 }
+
+/**
+ * @brief
+ *	-Pass-through call to deallocates a "batch_deljob_status" structure
+ *
+ * @param[in] bsp - pointer to batch request.
+ *
+ * @return	Void
+ *
+ */
+void
+pbs_delstatfree(struct batch_deljob_status *bdsp) {
+	(*pfn_pbs_delstatfree)(bdsp);
+}
+
 
 /**
  * @brief

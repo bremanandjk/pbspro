@@ -91,11 +91,10 @@ decode_DIS_replyCmd(int sock, struct batch_reply *reply)
 	struct brp_select **pselx;
 	struct batch_status *pstcmd;
 	struct batch_status **pstcx = NULL;
-	struct batch_status *pdel;
-	struct batch_status **pdelx = NULL;
+	struct batch_deljob_status *pdel;
+	struct batch_deljob_status **pdelx = NULL;
 	int rc = 0;
 	size_t txtlen;
-	int errcode;
 	preempt_job_info *ppj = NULL;
 
 	/* first decode "header" consisting of protocol type and version */
@@ -220,28 +219,25 @@ again:
 			reply->brp_count += ct;
 
 			while (ct--) {
-				pdel = (struct batch_status *) malloc(sizeof(struct batch_status));
+				pdel = (struct batch_deljob_status *) malloc(sizeof(struct batch_deljob_status));
 				if (pdel == 0)
 					return DIS_NOMALLOC;
 				pdel->next = NULL;
-				pdel->text = NULL;
-				pdel->attribs = NULL;
+				pdel->code = 0;
 
 				i = disrui(sock, &rc); /* read and discard brp_objtype */
 				if (rc == 0)
 					pdel->name = disrst(sock, &rc);
 				if (rc) {
-					pbs_statfree(pdel);
+					pbs_delstatfree(pdel);
 					return rc;
 				}
 				if (rc == 0) {
-					errcode = disrui(sock, &rc);
-					pdel->text = (char *)malloc(10);
-					snprintf(pdel->text, 10, "%d", errcode);
+					pdel->code = disrui(sock, &rc);
 				}
 				
 				if (rc) {
-					pbs_statfree(pdel);
+					pbs_delstatfree(pdel);
 					return rc;
 				}
 				*pdelx = pdel;

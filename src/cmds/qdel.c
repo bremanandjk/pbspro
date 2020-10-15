@@ -181,7 +181,7 @@ char **envp;
 	for (; optind < argc; optind++) {
 		int connect;
 		//int stat=0;
-		struct batch_status *p_delstatus;
+		struct batch_deljob_status *p_delstatus;
 		//int located = FALSE;
 
 		pbs_strncpy(job_id, argv[optind], sizeof(job_id));
@@ -270,8 +270,8 @@ char **envp;
 		p_delstatus = pbs_deljob2(connect, job_list, warg);
 		
 		while (p_delstatus != NULL) {
-			fprintf(stderr, "%s: Server returned error %s for job \n", p_delstatus->name, p_delstatus->text);
-			
+			fprintf(stderr, "%s: Server returned error %d for job \n", p_delstatus->name, p_delstatus->code);
+			any_failed = p_delstatus->code;
 			p_delstatus = p_delstatus->next;
 		}
 

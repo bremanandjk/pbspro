@@ -431,7 +431,8 @@ req_deletejob(struct batch_request *preq)
 				reply_preempt_jobs_request(err, PREEMPT_METHOD_DELETE, pjob);
 			update_deletejob_stat(jid, preq, err, &preply->brp_un.brp_delstat);
 			if (preq->rq_ind.rq_delete.tot_rpys == preq->rq_ind.rq_delete.tot_jobs) {
-				req_reject(err, 0, preq);  /* note, req_reject is not called for delete job request */
+				if (preq->rq_type == PBS_BATCH_DeleteJob2)
+					req_reject(err, 0, preq);  /* note, req_reject is not called for delete job request 2 */
 				return;
 			} else
 				continue;	
