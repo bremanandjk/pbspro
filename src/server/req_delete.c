@@ -582,6 +582,7 @@ req_deletejob(struct batch_request *preq)
 			} else
 				acct_del_write(jid, parent, preq, 0);
 
+			chk_array_doneness(parent);
 			continue;
 		}
 		/* what's left to handle is a range of subjobs, foreach subjob 	*/
